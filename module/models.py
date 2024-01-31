@@ -1,59 +1,80 @@
+from typing import List, Tuple, Union
 import torch
 import torch.nn as nn
 from torchinfo import summary
 
+from module.utils import UnetDown, UnetUp, EmbedFC, ResidualConvBlock
+
+
+def get_model(name: str, **kwargs):
+    if name == "ddpm":
+        return DDPM(**kwargs)
+    else:
+        raise ValueError("Incorrect model name")
 
 class DDPM(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels: int, n_feat: int, n_cfeat: int, size: Union[List, Tuple]):
         super().__init__()
-        self.emb_1 = torch.nn.Linear(in_features=1, out_features=32)
-        self.emb_2 = torch.nn.Linear(in_features=32, out_features=64)
 
-        self.down_conv1_32 = torch.nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1)
-        self.down_conv2_32 = torch.nn.Conv2d(in_channels=32, out_channels=32, kernel_size=3, padding=1)
-        self.down_conv3_64 = torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
-        self.down_conv4_128 = torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+        self.in_channels = in_channels
+        self.n_feat = n_feat
+        self.n_cfeat = n_cfeat
+        self.h = size[0]
+        self.w = size[1]
 
-        self.up_conv1_64 = torch.nn.ConvTranspose2d(in_channels=128, out_channels=64, kernel_size=3, stride=2, padding=1)
-        self.up_conv2_32 = torch.nn.ConvTranspose2d(in_channels=64, out_channels=32, kernel_size=3, stride=2, padding=1)
-        self.up_conv3_32 = torch.nn.Conv2d(in_channels=64, out_channels=3, kernel_size=3, padding=1)
 
-        self.relu = torch.nn.ReLU()
-        self.gelu = torch.nn.GELU()
+        self.init_conv = ResidualConvBlock(in_channels, n_feat, is_res=True)
 
-    def forward(self, x, t):
-        # x: (N, C, H, W)
-        # t: (N,1)
-        batch_size = t.shape[0]
+        self.down1 = UnetDown(n_feat, n_feat)
+        self.down2 = UnetDown(n_feat, 2*n_feat)
 
-        # time embedding
-        t = self.relu( self.emb_1(t) ) # (N, 32)
-        t = self.relu( self.emb_2(t) ) # (N, 64)
-        t = t.reshape(batch_size, -1, 1, 1) # (N, 64, 1, 1)
+        self.to_vec = nn.Sequential(nn.AvgPool2d(4), nn.GELU())
 
-        # image down conv
-        x = self.gelu( self.down_conv1_32(x) )    # (N, 32, 256, 200)
-        x_32 = self.gelu( self.down_conv2_32(x) ) # (N, 32, 256, 200)
-        size_32 = x_32.shape
-        x = torch.nn.functional.max_pool2d(x_32, (2,2)) # (N, 32, 128, 100)
-        x = self.gelu( self.down_conv3_64(x) ) # (N, 64, 128, 100)
-        size_64 = x.shape
-        x = torch.nn.functional.max_pool2d(x, (2,2)) # (N, 64, 64, 50)
+        self.timeembed1 = EmbedFC(1, 2*n_feat)
+        self.timeembed2 = EmbedFC(1, 1*n_feat)
+        self.contextembed1 = EmbedFC(n_cfeat, 2*n_feat)
+        self.contextembed2 = EmbedFC(n_cfeat, 1*n_feat)
 
-        x = x + t
-        x = self.gelu( self.down_conv4_128(x) ) # (N, 128, 64, 50)
+        self.up0 = nn.Sequential([
+            nn.ConvTranspose2d(2*n_feat, 2*n_feat, self.h//4, self.h//4),
+            nn.GroupNorm(8, 2*n_feat),
+            nn.GELU()
+        ])
 
-        # image up conv
-        x = self.gelu( self.up_conv1_64(x, output_size=size_64) ) # (N, 64, 128, 100)
-        x = self.gelu( self.up_conv2_32(x, output_size=size_32) ) # (N, 32, 256, 200)
-        x = torch.concat([x, x_32], axis=1) # (N, 64, 256, 200)
-        out = self.up_conv3_32(x) # (N, 3, 256, 200)
+        self.up1 = UnetUp(4*n_feat, n_feat)
+        self.up2 = UnetUp(2*n_feat, n_feat)
 
+        self.out = nn.Sequential([
+            nn.Conv2d(2*n_feat, n_feat, 3, 1, 1),
+            nn.GroupNorm(8, n_feat),
+            nn.GELU(),
+            nn.Conv2d(n_feat, self.in_channels, 3, 1, 1)
+        ])
+    
+    def forward(self, x, t, c=None):
+        x = self.init_conv(x)
+        down1 = self.down1(x)
+        down2 = self.down2(down1)
+
+        hidden_vec = self.to_vec(down2)
+
+        if c is None:
+            c = torch.zeros(x.shape[0], self.n_feat).to(x.device)
+        
+        cemb1 = self.contextembed1(c).view(-1, self.n_feat * 2, 1, 1)
+        temb1 = self.timeembed1(t).view(-1, self.n_feat * 2, 1, 1)
+        cemb2 = self.contextembed2(c).view(-1, self.n_feat, 1, 1)
+        temb2 = self.timeembed2(t).view(-1, self.n_feat, 1, 1)
+
+        up1 = self.up0(hidden_vec)
+        up2 = self.up1(cemb1*up1 + temb1, down2)
+        up3 = self.up2(cemb2*up2 + temb2, down1)
+        out = self.out(torch.cat((up3, x), 1))
         return out
-
+    
 
 if __name__ == "__main__":
-    model = DDPM()
+    model = DDPM(3, 64, 5, (16, 16))
     i_1 = torch.rand((1, 3, 256, 200))
     i_2 = torch.tensor([[100]], dtype=torch.float32)
     summary(model, input_data=(i_1, i_2))
