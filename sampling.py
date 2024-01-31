@@ -1,4 +1,6 @@
 import os
+import cv2
+import numpy as np
 import torch
 import torch.nn as nn
 from einops import rearrange
@@ -16,7 +18,7 @@ beta = dataset.beta.to(device)
 T = dataset.T
 
 model = DDPM().to(device)
-ckpt = torch.load(f"./ckpt/{}", map_location=device)
+ckpt = torch.load(f"./ckpt/30_DDPM.pth", map_location=device)
 model.load_state_dict(ckpt)
 
 interval = 50
@@ -44,8 +46,19 @@ with torch.no_grad():
 
         if (T - t) % interval == 0 or t - 1 == 0:
             saved_frame.append(t)
-            _x = x.detach()
+            _x = x.detach().cpu()
             _x = rearrange(_x, "n c h w -> h (n w) c")
-            _x = (_x - _x.min())/(_x.max() - _x.min()).clip(0, 1)
+            _x = (_x - _x.min())/(_x.max() - _x.min())
+            _x = _x*255.0
+            _x = _x.numpy().astype(np.uint8)
+            imgs.append(_x)
+
+os.makedirs("sample", exist_ok=True)
+for idx, img in enumerate(imgs):
+    cv2.imwrite(f"sample/img_{idx}.png", img)
+
+
+
+
 
 

@@ -24,7 +24,7 @@ train_transform = A.Compose([
     ToTensorV2()
 ])
 train_dataset = get_dataset("celeb_a", data_path="./data/img_align_celeba", transforms=train_transform)
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 
 model = DDPM().to(device)
 loss_fn = nn.MSELoss()
