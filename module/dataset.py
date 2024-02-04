@@ -22,26 +22,18 @@ class CustomDataset(Dataset):
             self,
             imgs: Union[List, np.ndarray],
             labels: Union[List, np.ndarray],
-            beta_1: float = 1e-4,
-            beta_T: float = 0.02,
-            T: int = 500,
+            T: int,
+            alpha_bar,
             null_context = False,
             transforms = None
         ):
 
         self.imgs = imgs
         self.labels = labels
-        self.beta_1 = beta_1,
-        self.beta_T = beta_T,
-        self.T = T
         self.null_context = null_context
         self.transforms = transforms
-
-        # 1 ~ T까지 사용 위해 앞에 상수 0 추가
-        self.beta = torch.cat([ torch.tensor([0]), torch.linspace(beta_1, beta_T, T)], axis=0)
-        self.alpha = 1 - self.beta
-        # overflow방지 위해 log후 exp 적용
-        self.alpha_bar = torch.exp(torch.cumsum(torch.log(self.alpha), axis=0))
+        self.alpha_bar = alpha_bar
+        self.T = T
     
     def __getitem__(self, index):
         # Hint :

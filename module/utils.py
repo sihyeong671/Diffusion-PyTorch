@@ -25,6 +25,8 @@ class Config:
         self.seed = args.seed
         self.data_path = args.data_path
         self.save_dir = args.save_dir
+        self.ckpt_path = args.ckpt_path
+        self.mode = args.mode
         
         if args.exp_name is None:
             now = datetime.now()
@@ -33,9 +35,11 @@ class Config:
             self.exp_name = args.exp_name
         
         self.log_dir = os.path.join(self.save_dir, self.exp_name)
-        os.makedirs(self.log_dir, exist_ok=True)
         
-        self._save()
+        
+        if self.mode == "train":
+            os.makedirs(self.log_dir, exist_ok=True)
+            self._save()
         
     def __str__(self):
         attr = vars(self)
@@ -66,6 +70,14 @@ def show_images(data, num_samples=20, cols=4):
         plt.subplot(int(num_samples/cols) + 1, cols, i + 1)
         plt.imshow(img)
 
+
+def noise_scheduler(beta_1, beta_T, T):
+     # 1 ~ T까지 사용 위해 앞에 상수 0 추가
+    beta = torch.cat([torch.tensor([0]), torch.linspace(beta_1, beta_T, T)], axis=0)
+    alpha = 1 - beta
+    # overflow방지 위해 log후 exp 적용
+    alpha_bar = torch.exp(torch.cumsum(torch.log(alpha), axis=0))
+    return beta, alpha, alpha_bar
 
 class ResidualConvBlock(nn.Module):
     def __init__(

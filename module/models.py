@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torchinfo import summary
 
-from utils import UnetDown, UnetUp, EmbedFC, ResidualConvBlock
+from module.utils import UnetDown, UnetUp, EmbedFC, ResidualConvBlock
 
 def get_model(name: str, **kwargs):
     if name == "ddpm":
