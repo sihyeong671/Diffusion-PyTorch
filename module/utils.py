@@ -19,6 +19,9 @@ class Config:
         self.batch_size = args.batch_size
         self.num_workers = args.num_workers
         self.lr = args.lr
+        self.beta_1 = args.beta_1
+        self.beta_T = args.beta_T
+        self.T = args.T
         self.seed = args.seed
         self.data_path = args.data_path
         self.save_dir = args.save_dir
@@ -103,7 +106,7 @@ class ResidualConvBlock(nn.Module):
         
         else:
             x1 = self.conv1(x)
-            x2 = self.conv2(x)
+            x2 = self.conv2(x1)
             return x2
 
 
@@ -111,11 +114,11 @@ class UnetUp(nn.Module):
     def __init__(self, in_dim: int, out_dim: int):
         super().__init__()
 
-        self.model = nn.Sequential([
+        self.model = nn.Sequential(
             nn.ConvTranspose2d(in_dim, out_dim, 2, 2),
             ResidualConvBlock(out_dim, out_dim),
             ResidualConvBlock(out_dim, out_dim),
-        ])
+        )
     
     def forward(self, x, skip):
         x = torch.cat((x, skip), dim=1)
@@ -127,11 +130,11 @@ class UnetDown(nn.Module):
     def __init__(self, in_dim: int, out_dim: int):
         super().__init__()
 
-        self.model = nn.Sequential([
+        self.model = nn.Sequential(
             ResidualConvBlock(in_dim, out_dim),
             ResidualConvBlock(out_dim, out_dim),
             nn.MaxPool2d(2)
-        ])
+        )
     
     def forward(self, x):
         return self.model(x)
@@ -143,14 +146,14 @@ class EmbedFC(nn.Module):
 
         self.in_dim = in_dim
 
-        self.model = nn.Sequential([
+        self.model = nn.Sequential(
             nn.Linear(in_dim, emb_dim),
             nn.GELU(),
             nn.Linear(emb_dim, emb_dim)
-        ])
+        )
     
     def forward(self, x):
-        x = x.view(-1, self.in_dim)
+        x = x.view(-1, self.in_dim) # batch가 1 인경우 문제가 생길 수 있음
         x = self.model(x)
         return x
 

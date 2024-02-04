@@ -3,8 +3,7 @@ import torch
 import torch.nn as nn
 from torchinfo import summary
 
-from module.utils import UnetDown, UnetUp, EmbedFC, ResidualConvBlock
-
+from utils import UnetDown, UnetUp, EmbedFC, ResidualConvBlock
 
 def get_model(name: str, **kwargs):
     if name == "ddpm":
@@ -35,21 +34,21 @@ class DDPM(nn.Module):
         self.contextembed1 = EmbedFC(n_cfeat, 2*n_feat)
         self.contextembed2 = EmbedFC(n_cfeat, 1*n_feat)
 
-        self.up0 = nn.Sequential([
+        self.up0 = nn.Sequential(
             nn.ConvTranspose2d(2*n_feat, 2*n_feat, self.h//4, self.h//4),
             nn.GroupNorm(8, 2*n_feat),
             nn.GELU()
-        ])
+        )
 
         self.up1 = UnetUp(4*n_feat, n_feat)
         self.up2 = UnetUp(2*n_feat, n_feat)
 
-        self.out = nn.Sequential([
+        self.out = nn.Sequential(
             nn.Conv2d(2*n_feat, n_feat, 3, 1, 1),
             nn.GroupNorm(8, n_feat),
             nn.GELU(),
             nn.Conv2d(n_feat, self.in_channels, 3, 1, 1)
-        ])
+        )
     
     def forward(self, x, t, c=None):
         x = self.init_conv(x)
@@ -57,10 +56,8 @@ class DDPM(nn.Module):
         down2 = self.down2(down1)
 
         hidden_vec = self.to_vec(down2)
-
         if c is None:
-            c = torch.zeros(x.shape[0], self.n_feat).to(x.device)
-        
+            c = torch.zeros(x.shape[0], self.n_cfeat).to(x.device)
         cemb1 = self.contextembed1(c).view(-1, self.n_feat * 2, 1, 1)
         temb1 = self.timeembed1(t).view(-1, self.n_feat * 2, 1, 1)
         cemb2 = self.contextembed2(c).view(-1, self.n_feat, 1, 1)
@@ -75,6 +72,6 @@ class DDPM(nn.Module):
 
 if __name__ == "__main__":
     model = DDPM(3, 64, 5, (16, 16))
-    i_1 = torch.rand((1, 3, 256, 200))
+    i_1 = torch.rand((10, 3, 16, 16))
     i_2 = torch.tensor([[100]], dtype=torch.float32)
     summary(model, input_data=(i_1, i_2))

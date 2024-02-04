@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 def get_dataset(name: str, **kwargs):
     # name should be all small letter
-    if name == "celeb_a":
+    if name == "custom":
         return CustomDataset(**kwargs)
     else:
         raise ValueError("you have incorrect dataset name")
@@ -20,16 +20,28 @@ class CustomDataset(Dataset):
     """
     def __init__(
             self,
-            imgs: Union[List, np.ndarray], 
+            imgs: Union[List, np.ndarray],
             labels: Union[List, np.ndarray],
+            beta_1: float = 1e-4,
+            beta_T: float = 0.02,
+            T: int = 500,
             null_context = False,
             transforms = None
         ):
 
         self.imgs = imgs
         self.labels = labels
+        self.beta_1 = beta_1,
+        self.beta_T = beta_T,
+        self.T = T
         self.null_context = null_context
         self.transforms = transforms
+
+        # 1 ~ T까지 사용 위해 앞에 상수 0 추가
+        self.beta = torch.cat([ torch.tensor([0]), torch.linspace(beta_1, beta_T, T)], axis=0)
+        self.alpha = 1 - self.beta
+        # overflow방지 위해 log후 exp 적용
+        self.alpha_bar = torch.exp(torch.cumsum(torch.log(self.alpha), axis=0))
     
     def __getitem__(self, index):
         # Hint :
@@ -43,13 +55,20 @@ class CustomDataset(Dataset):
         if self.transforms is not None:
             img = self.transforms(image=img)["image"]
             if self.null_context:
-                label = torch.tensor(0).to(torch.int64)
+                label = torch.tensor(0).to(torch.float32) # int64 -> float32
             else:
-                label = torch.tensor(self.labels[index]).to(torch.int64)
+                label = torch.tensor(self.labels[index]).to(torch.float32) # int64 -> float32
         
+        t = np.random.randint(1, self.T+1)
+        eps = torch.randn_like(img)
+        x_t = torch.sqrt(self.alpha_bar[t]) * img + torch.sqrt(1 - self.alpha_bar[t]) * eps
+
         return {
             "img": img,
-            "label": label
+            "x_t": x_t,
+            "t": t,
+            "eps": eps,
+            "label": label,
         }
         # -------------------------------
 
