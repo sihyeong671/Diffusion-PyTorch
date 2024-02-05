@@ -123,14 +123,14 @@ class Trainer:
                     epoch_loss += loss.item()
                     epoch_mae += F.l1_loss(eps_theta, eps)
                 
-            if epoch % 10 == 0:
+            if epoch % 5 == 0:
                 os.makedirs("./ckpt", exist_ok=True)
                 torch.save(self.model.state_dict(), f"./ckpt/{epoch}_DDPM.pth")
                 
             epoch_loss /= len(self.train_dataloader)
             epoch_mae /= len(self.train_dataloader)
 
-            print(f"Epoch: {epoch}\tLoss: {epoch_loss}\t MAE: {epoch_mae}")
+            print(f"Epoch: {epoch}\tLoss: {epoch_loss:.5f}\t MAE: {epoch_mae:.5f}")
             
     def _valid(self):
         pass
@@ -143,7 +143,7 @@ class Trainer:
         self.model.eval()
         with torch.no_grad():
             x = torch.randn(size=(N, C, H, W)).to(self.config.device)
-            for t in range(self.config.T, 0, -1):
+            for t in tqdm(range(self.config.T, 0, -1), desc="sampling loop time step"):
                 if t > 1:
                     z = torch.randn(size=(N, C, H, W)).to(self.config.device)
                 else:
@@ -151,7 +151,7 @@ class Trainer:
                     
                 t_torch = torch.tensor([[t]]*N, dtype=torch.float32).to(self.config.device)
                 eps_theta = self.model(x, t_torch)
-                x = (1 / torch.sqrt(self.alpha[t])) * (x - (1 - self.alpha[t]) / (torch.sqrt(1 - self.alpha_bar[t]) * eps_theta)) + torch.sqrt(self.beta[t])*z
+                x = (1 / torch.sqrt(self.alpha[t])) * (x - ((1 - self.alpha[t]) / torch.sqrt(1 - self.alpha_bar[t])) * eps_theta) + torch.sqrt(self.beta[t])*z
 
                 if t % 20 == 0 or t - 1 == 0:
                     _x = x.detach().cpu()
