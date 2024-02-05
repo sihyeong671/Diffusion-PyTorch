@@ -8,7 +8,7 @@ def sort_by_img_num(name: str):
     num = img_name.split("_")[-1]
     return int(num)
 
-model_name = "DDPM_context"
+model_name = "DDPM"
 image_paths = glob(f"./{model_name}/*.png")
 image_paths = sorted(image_paths, key=sort_by_img_num)
 images = [cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB) for image_path in image_paths]

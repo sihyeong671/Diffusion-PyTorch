@@ -6,7 +6,7 @@
 ---
 ## TODO
 - [x] sampling animation
-- [ ] speed up sampling time
+- [x] speed up sampling time
 - [x] conditional sampling
 
 ---
@@ -14,7 +14,8 @@
 ## How To Use
 
 ```sh
-# install library
+# setup pytorch enviornment
+# install library:
 # pip install -r requirementx.txt
 
 # train
@@ -22,12 +23,19 @@ python run.py --mode=trian
 
 # sampling
 python run.py --mode=sampling
+
+# ddim sampling
+python run.py --mode=ddim_sampling
+
+# For more detail, see run.sh
 ```
 
 ---
 
 ## Sampling Animation
 Jupyter notebook code : [here](./sample/view_sampling.ipynb)
+
+### DDPM
 
 **50 Epoch DDPM**
 <p align=center>
@@ -70,4 +78,9 @@ Jupyter notebook code : [here](./sample/view_sampling.ipynb)
     <img width=600px src="./sample/50_epoch_DDPM_context_sideface_animation.gif" loop=infinite/>
 </p>
 
----
+### DDIM
+_DDPM : 2.939 sec (NVIDIA TITAN V)_
+_DDIM : 0.981 sec (NVIDIA TITAN V)_
+<p align=center>
+    <img width=600px src="./sample/DDIM_animation.gif" loop=infinite/>
+</p>

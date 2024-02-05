@@ -1,4 +1,5 @@
 import os
+import time
 
 from tqdm import tqdm
 import cv2
@@ -83,7 +84,7 @@ class Trainer:
             # LR Scheduler
             self.lr_scheduler = None
 
-        elif mode == "sampling":
+        elif mode == "sampling" or mode == "ddim_sampling":
             # load model
             ckpt = torch.load(self.config.ckpt_path, map_location=self.config.device)
             self.model.load_state_dict(ckpt)
@@ -147,6 +148,7 @@ class Trainer:
             ctx = get_context("hero", N)
             ctx = ctx.to(self.config.device)
         
+        start = time.time()
         self.model.eval()
         with torch.no_grad():
             x = torch.randn(size=(N, C, H, W)).to(self.config.device)
@@ -158,8 +160,8 @@ class Trainer:
                     
                 t_torch = torch.tensor([[t]]*N, dtype=torch.float32).to(self.config.device)
                 eps_theta = self.model(x, t_torch, c=ctx)
+                
                 x = (1 / torch.sqrt(self.alpha[t])) * (x - ((1 - self.alpha[t]) / torch.sqrt(1 - self.alpha_bar[t])) * eps_theta) + torch.sqrt(self.beta[t])*z
-
                 if t % 20 == 0 or t - 1 == 0:
                     _x = x.detach().cpu()
                     # _x = rearrange(_x, "(n1 n2) c h w -> (n1 h) (n2 w) c", n1=5, n2=2)
@@ -168,7 +170,49 @@ class Trainer:
                     _x = _x*255.0
                     _x = _x.numpy().astype(np.uint8)
                     imgs.append(_x)
-            
+        end = time.time()
+        print(f"{end - start:.5f} sec")
+
+        for idx, img in enumerate(imgs):
+            cv2.imwrite(f"sample/{self.config.model_name}/img_{idx}.png", img)
+
+        
+    def ddim_sampling(self, n: int=20):
+        N, C, H, W = 5, 3, 16, 16
+        os.makedirs(f"sample/{self.config.model_name}", exist_ok=True)
+        imgs = []
+        ctx = None
+        if self.config.use_context:
+            # you can control context
+            ctx = get_context("hero", N)
+            ctx = ctx.to(self.config.device)
+        
+        start = time.time()
+        self.model.eval()
+        with torch.no_grad():
+            x = torch.randn(size=(N, C, H, W)).to(self.config.device)
+            step_size = self.config.T // n 
+            for t in tqdm(range(self.config.T, 0, -step_size), desc="sampling loop time step"):
+                
+                t_torch = torch.tensor([[t]]*N, dtype=torch.float32).to(self.config.device)
+                prev_t = t - step_size
+
+                eps_theta = self.model(x, t_torch, c=ctx)
+                x0_pred = torch.sqrt(self.alpha_bar[prev_t]) * (x - torch.sqrt(1 - self.alpha_bar[t]) * eps_theta) / torch.sqrt(self.alpha_bar[t])
+                dir_xt = torch.sqrt(1 - self.alpha_bar[prev_t]) * eps_theta
+
+                # you can use z
+                x = x0_pred + dir_xt # + z
+
+                _x = x.detach().cpu()
+                # _x = rearrange(_x, "(n1 n2) c h w -> (n1 h) (n2 w) c", n1=5, n2=2)
+                _x = rearrange(_x, "n c h w -> h (n w) c")
+                _x = (_x - _x.min())/(_x.max() - _x.min())
+                _x = _x * 255.0
+                _x = _x.numpy().astype(np.uint8)
+                imgs.append(_x)
+        end = time.time()
+        print(f"{end - start:.5f} sec")
 
         for idx, img in enumerate(imgs):
             cv2.imwrite(f"sample/{self.config.model_name}/img_{idx}.png", img)

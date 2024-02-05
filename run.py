@@ -14,6 +14,8 @@ def run(config: Config):
         trainer.train()
     elif config.mode == "sampling":
         trainer.sampling()
+    elif config.mode == "ddim_sampling":
+        trainer.ddim_sampling()
 
         
 
