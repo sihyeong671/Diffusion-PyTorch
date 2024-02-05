@@ -27,6 +27,7 @@ python run.py --mode=sampling
 ---
 
 ## Sampling Animation
+you can also see in [here](./sample/view_sampling.ipynb)
 
 <p align=center>
     <img width=600px src="./sample/animation.gif" loop=infinite/>
