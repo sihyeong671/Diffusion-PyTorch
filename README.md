@@ -4,8 +4,19 @@
 - [Deeplearning.ai(How Diffusion Model Work)](https://www.deeplearning.ai/short-courses/how-diffusion-models-work/)
 - [ML simple works Blog](https://metamath1.github.io/blog/posts/diffusion/ddpm_part2-2.html?utm_source=pytorchkr)
 ---
+## TODO
+- [ ] sampling animation
+- [ ] speed up sampling time
+- [ ] conditional sampling
+
+---
+
 ## How To Use
 
 ```sh
+# train
+python run.py --mode=trian
 
+# sampling
+python run.py --mode=sampling
 ```
