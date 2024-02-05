@@ -29,5 +29,5 @@ python run.py --mode=sampling
 ## Sampling Animation
 
 <p align=center>
-    <img width=600px src="./sample/animation.gif"/>
+    <img width=600px src="./sample/animation.gif" loop=infinite/>
 </p>
