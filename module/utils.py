@@ -26,6 +26,8 @@ class Config:
         self.data_path = args.data_path
         self.save_dir = args.save_dir
         self.ckpt_path = args.ckpt_path
+        self.use_context = args.use_context
+        self.model_name = args.model_name
         self.mode = args.mode
         
         if args.exp_name is None:
@@ -78,6 +80,23 @@ def noise_scheduler(beta_1, beta_T, T):
     # overflow방지 위해 log후 exp 적용
     alpha_bar = torch.exp(torch.cumsum(torch.log(alpha), axis=0))
     return beta, alpha, alpha_bar
+
+
+def get_context(label: str, num: int):
+    # you can mixing label like [0, 0, 0, 0.5, 0.5]
+    label_encoder = {
+        "hero": [1, 0, 0, 0, 0],
+        "non-hero": [0, 1, 0, 0, 0],
+        "food": [0, 0, 1, 0, 0],
+        "spell&weapons": [0, 0, 0, 1, 0],
+        "side-facing": [0, 0, 0, 0, 1]
+    }
+    code = label_encoder[label]
+    ctx = torch.tensor([
+        code * num
+    ]).float()
+    return ctx
+
 
 class ResidualConvBlock(nn.Module):
     def __init__(

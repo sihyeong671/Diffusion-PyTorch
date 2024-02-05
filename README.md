@@ -7,7 +7,7 @@
 ## TODO
 - [x] sampling animation
 - [ ] speed up sampling time
-- [ ] conditional sampling
+- [x] conditional sampling
 
 ---
 
@@ -27,8 +27,47 @@ python run.py --mode=sampling
 ---
 
 ## Sampling Animation
-you can also see in [here](./sample/view_sampling.ipynb)
+Jupyter notebook code : [here](./sample/view_sampling.ipynb)
 
+**50 Epoch DDPM**
 <p align=center>
-    <img width=600px src="./sample/animation.gif" loop=infinite/>
+    <img width=600px src="./sample/50_epoch_DDPM_animation.gif" loop=infinite/>
 </p>
+
+**30 Epoch DDPM**
+<p align=center>
+    <img width=600px src="./sample/30_epoch_DDPM_animation.gif" loop=infinite/>
+</p>
+
+**10 Epoch DDPM**
+<p align=center>
+    <img width=600px src="./sample/10_epoch_DDPM_animation.gif" loop=infinite/>
+</p>
+
+### DDPM with Context
+**Hero**
+<p align=center>
+    <img width=600px src="./sample/50_epoch_DDPM_context_hero_animation.gif" loop=infinite/>
+</p>
+
+**Non-Hero**
+<p align=center>
+    <img width=600px src="./sample/50_epoch_DDPM_context_non-hero_animation.gif" loop=infinite/>
+</p>
+
+**Food**
+<p align=center>
+    <img width=600px src="./sample/50_epoch_DDPM_context_food_animation.gif" loop=infinite/>
+</p>
+
+**spell&weapons**
+<p align=center>
+    <img width=600px src="./sample/50_epoch_DDPM_context_spell-weapon_animation.gif" loop=infinite/>
+</p>
+
+**Side Facing**
+<p align=center>
+    <img width=600px src="./sample/50_epoch_DDPM_context_sideface_animation.gif" loop=infinite/>
+</p>
+
+---

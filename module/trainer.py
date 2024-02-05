@@ -14,7 +14,7 @@ from einops import rearrange
 
 from module.dataset import get_dataset
 from module.models import get_model
-from module.utils import Config, seed_everything, noise_scheduler
+from module.utils import Config, seed_everything, noise_scheduler, get_context
 
 class Trainer:
     def __init__(self, config: Config):
@@ -106,11 +106,15 @@ class Trainer:
                 x_t = batch["x_t"].to(self.config.device)
                 t = batch["t"].to(self.config.device)
                 eps = batch["eps"].to(self.config.device)
-                label = batch["label"].to(self.config.device)
-
+                label = None
+                if self.config.use_context:
+                    label = batch["label"].to(self.config.device)
+                    # random masking for generalization
+                    context_mask = torch.bernoulli(torch.zeros(label.shape[0])+0.9).to(self.config.device)
+                    label = label * context_mask.unsqueeze(-1)
 
                 self.optimizer.zero_grad()
-                eps_theta = self.model(x_t, t.reshape(-1, 1).float())
+                eps_theta = self.model(x_t, t.reshape(-1, 1).float(), c=label)
                 loss = self.loss_fn(eps_theta, eps)
                 loss.backward()
                 
@@ -122,8 +126,8 @@ class Trainer:
                     epoch_mae += F.l1_loss(eps_theta, eps)
                 
             if epoch % 5 == 0:
-                os.makedirs("./ckpt", exist_ok=True)
-                torch.save(self.model.state_dict(), f"./ckpt/{epoch}_DDPM.pth")
+                os.makedirs(f"./ckpt/{self.config.model_name}", exist_ok=True)
+                torch.save(self.model.state_dict(), f"./ckpt/{self.config.model_name}/{epoch}_{self.config.model_name}.pth")
                 
             epoch_loss /= len(self.train_dataloader)
             epoch_mae /= len(self.train_dataloader)
@@ -135,8 +139,13 @@ class Trainer:
     
     def sampling(self):
         N, C, H, W = 5, 3, 16, 16
-        
+        os.makedirs(f"sample/{self.config.model_name}", exist_ok=True)
         imgs = []
+        ctx = None
+        if self.config.use_context:
+            # you can control context
+            ctx = get_context("hero", N)
+            ctx = ctx.to(self.config.device)
         
         self.model.eval()
         with torch.no_grad():
@@ -148,11 +157,12 @@ class Trainer:
                     z = torch.zeros((N, C, H, W)).to(self.config.device)
                     
                 t_torch = torch.tensor([[t]]*N, dtype=torch.float32).to(self.config.device)
-                eps_theta = self.model(x, t_torch)
+                eps_theta = self.model(x, t_torch, c=ctx)
                 x = (1 / torch.sqrt(self.alpha[t])) * (x - ((1 - self.alpha[t]) / torch.sqrt(1 - self.alpha_bar[t])) * eps_theta) + torch.sqrt(self.beta[t])*z
 
                 if t % 20 == 0 or t - 1 == 0:
                     _x = x.detach().cpu()
+                    # _x = rearrange(_x, "(n1 n2) c h w -> (n1 h) (n2 w) c", n1=5, n2=2)
                     _x = rearrange(_x, "n c h w -> h (n w) c")
                     _x = (_x - _x.min())/(_x.max() - _x.min())
                     _x = _x*255.0
@@ -161,7 +171,6 @@ class Trainer:
             
 
         for idx, img in enumerate(imgs):
-            # denorm
-            cv2.imwrite(f"sample/img_{idx}.png", img)
+            cv2.imwrite(f"sample/{self.config.model_name}/img_{idx}.png", img)
     
     

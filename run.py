@@ -30,11 +30,10 @@ if __name__ == "__main__":
     parser.add_argument("--beta_1", type=float, default=1e-4)
     parser.add_argument("--beta_T", type=float, default=0.02)
     parser.add_argument("--T", type=int, default=500)
-    parser.add_argument("--ckpt_path", type=str, default="./ckpt/50_DDPM.pth")
+    parser.add_argument("-c", "--use_context", action="store_true")
+    parser.add_argument("--ckpt_path", type=str, default="./ckpt/DDPM/50_DDPM.pth")
+    parser.add_argument("--model_name", type=str, default="DDPM")
     parser.add_argument("--mode", type=str, default="train")
-
-    # model_name
-    # dataset_name
 
     args = parser.parse_args()
     
