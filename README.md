@@ -14,9 +14,20 @@
 ## How To Use
 
 ```sh
+# install library
+# pip install -r requirementx.txt
+
 # train
 python run.py --mode=trian
 
 # sampling
 python run.py --mode=sampling
 ```
+
+---
+
+## Sampling Animation
+
+<p align=center>
+    <img width=500px src="./sample/animation.gif" loop=infinite/>
+</p>

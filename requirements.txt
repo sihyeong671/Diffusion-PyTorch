@@ -1,0 +1,8 @@
+# torch
+opencv-python
+albumentations
+torchinfo
+einops
+plotly
+kaleido
+nbformat>=4.2.0

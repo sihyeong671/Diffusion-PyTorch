@@ -1,9 +1,7 @@
 import os
-from glob import glob
 
 from tqdm import tqdm
 import cv2
-from sklearn.model_selection import train_test_split
 import numpy as np
 import albumentations as A
 from albumentations.pytorch.transforms import ToTensorV2
