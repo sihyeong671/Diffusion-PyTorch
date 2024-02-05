@@ -5,7 +5,7 @@
 - [ML simple works Blog](https://metamath1.github.io/blog/posts/diffusion/ddpm_part2-2.html?utm_source=pytorchkr)
 ---
 ## TODO
-- [ ] sampling animation
+- [x] sampling animation
 - [ ] speed up sampling time
 - [ ] conditional sampling
 
@@ -29,5 +29,5 @@ python run.py --mode=sampling
 ## Sampling Animation
 
 <p align=center>
-    <img width=500px src="./sample/animation.gif" loop=infinite/>
+    <img width=600px src="./sample/animation.gif"/>
 </p>
