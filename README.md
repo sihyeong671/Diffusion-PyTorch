@@ -80,6 +80,7 @@ Jupyter notebook code : [here](./sample/view_sampling.ipynb)
 
 ### DDIM
 _DDPM : 2.939 sec (NVIDIA TITAN V)_
+
 _DDIM : 0.981 sec (NVIDIA TITAN V)_
 <p align=center>
     <img width=600px src="./sample/DDIM_animation.gif" loop=infinite/>
